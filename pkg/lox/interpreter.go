@@ -42,40 +42,42 @@ func (i *Interpreter) visitBinary(b Binary) error {
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l - r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
+
 	case SLASH:
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l / r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
 	case STAR:
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l * r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
 	// Plus does the same operation on float64. If the values do not convert, string concatenation is attempted
 	case PLUS:
 
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l + r}
+				return nil
 			}
 		} else if l, ok := left.Value.(string); ok {
 			if r, ok := right.Value.(string); ok {
 				i.literal = Literal{l + r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
 	// The rest are simple truthy-checks
 	// Greater, Greater Equal, Less and Less Equal only operator on float64
 	// Bang Equal and Equal Equal operate on any values
@@ -83,10 +85,11 @@ func (i *Interpreter) visitBinary(b Binary) error {
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l > r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
+
 	case GREATER_EQUAL:
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
@@ -99,18 +102,19 @@ func (i *Interpreter) visitBinary(b Binary) error {
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l < r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
+
 	case LESS_EQUAL:
 		if l, ok := left.Value.(float64); ok {
 			if r, ok := right.Value.(float64); ok {
 				i.literal = Literal{l <= r}
+				return nil
 			}
-		} else {
-			return operationError
 		}
+		return operationError
 	case BANG_EQUAL:
 		i.literal = Literal{left != right}
 	case EQUAL_EQUAL:

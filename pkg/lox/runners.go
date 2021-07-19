@@ -45,9 +45,9 @@ func run(source string) {
 	s.scanTokens()
 
 	// Iterate through all tokens
-	for _, token := range s.tokens {
+	/*for _, token := range s.tokens {
 		fmt.Printf("TOKEN: %+v\n", token)
-	}
+	}*/
 
 	p := Parser{tokens: s.tokens}
 	p.parse()
@@ -57,6 +57,7 @@ func run(source string) {
 		for _, e := range p.expressions {
 			result, err := i.Interpret(e)
 			if err != nil {
+				fmt.Printf("%v\n", err)
 				return
 			}
 			fmt.Printf("%+v\n", result)

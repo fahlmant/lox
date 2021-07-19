@@ -19,6 +19,7 @@ func (p *Parser) parse() (Expr, error) {
 		expr, err = p.expression()
 		if err != nil {
 			p.hadError = true
+			fmt.Printf("%v\n", err)
 			return nil, err
 		}
 		p.expressions = append(p.expressions, expr)
