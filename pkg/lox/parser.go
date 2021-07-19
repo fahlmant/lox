@@ -182,6 +182,8 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 		return Token{}, fmt.Errorf("error at line %d: expected '%v'", token.Line, token.String())
 	}
 
+	p.advance()
+
 	return token, nil
 }
 
