@@ -48,4 +48,12 @@ func run(source string) {
 	for _, token := range s.tokens {
 		fmt.Printf("TOKEN: %+v\n", token)
 	}
+
+	p := Parser{tokens: s.tokens}
+	expr, err := p.parse()
+	if err != nil {
+		fmt.Printf("%v\n", err)
+	}
+
+	fmt.Printf("%+v\n", expr)
 }
