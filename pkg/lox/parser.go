@@ -6,8 +6,10 @@ import (
 )
 
 type Parser struct {
-	tokens  []Token
-	current int
+	tokens      []Token
+	current     int
+	expressions []Expr
+	hadError    bool
 }
 
 func (p *Parser) parse() (Expr, error) {
@@ -16,9 +18,10 @@ func (p *Parser) parse() (Expr, error) {
 	for !p.isAtEnd() {
 		expr, err = p.expression()
 		if err != nil {
+			p.hadError = true
 			return nil, err
 		}
-		fmt.Printf("EXPR: %v, Token: %v", expr, p.tokens[p.current])
+		p.expressions = append(p.expressions, expr)
 	}
 
 	return expr, nil
@@ -160,8 +163,7 @@ func (p *Parser) primary() (Expr, error) {
 		return Grouping{expr}, nil
 	}
 
-	fmt.Printf("Token: %v", p.tokens[p.current])
-	return nil, fmt.Errorf("error at line %d: unknown token '%v'", p.peek().Line, p.peek().Literal)
+	return nil, fmt.Errorf("error at line %d: unknown token '%v'", p.peek().Line, p.peek().Lexeme)
 }
 
 func (p *Parser) match(tokenType ...TokenType) bool {

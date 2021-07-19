@@ -29,7 +29,7 @@ func errorToken(t Token, message string) {
 type AstPrinter struct{}
 
 func (a AstPrinter) VisitBinary(b Binary) error {
-	fmt.Printf("(%v %v %v)", b.Operator.Lexeme, b.Left, b.Right)
+	fmt.Printf("(%s %v %v)", b.Operator.Lexeme, b.Left, b.Right)
 
 	return nil
 }
@@ -48,7 +48,7 @@ func (a AstPrinter) VisitLiteral(l Literal) error {
 }
 
 func (a AstPrinter) VisitUnary(u Unary) error {
-	fmt.Printf("(%v %v)", u.Operator.Lexeme, u.Right)
+	fmt.Printf("(%s %v)", u.Operator.Lexeme, u.Right)
 
 	return nil
 }
