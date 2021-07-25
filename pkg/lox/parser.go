@@ -6,54 +6,204 @@ import (
 )
 
 type Parser struct {
-	tokens      []Token
-	current     int
-	expressions []Expr
-	hadError    bool
+	tokens     []Token
+	current    int
+	statements []Stmt
+	hadError   bool
 }
 
-func (p *Parser) parse() (Expr, error) {
-	var expr Expr
-	var err error
+// Main parsing loop
+func (p *Parser) parse() ([]Stmt, error) {
 	for !p.isAtEnd() {
-		expr, err = p.expression()
+		// Start at the top of the statement recursive tree and get a single statement
+		// for each section of code
+		stmt, err := p.declaration()
 		if err != nil {
+			// Set hadError so the interpreter doesn't run
 			p.hadError = true
-			fmt.Printf("%v\n", err)
 			return nil, err
 		}
-		p.expressions = append(p.expressions, expr)
+		p.statements = append(p.statements, stmt)
 	}
 
-	return expr, nil
+	return p.statements, nil
+}
+
+func (p *Parser) declaration() (Stmt, error) {
+	// If there's a variable declaration, handle it
+	if p.match(VAR) {
+		return p.varDeclaration()
+	}
+	// Otherwise, handle the section as a statement
+	return p.statement()
+}
+
+func (p *Parser) varDeclaration() (Stmt, error) {
+
+	// Consume and load the identifier name into a token
+	token, err := p.consume(IDENTIFIER, "Expect variable name")
+	if err != nil {
+		return nil, err
+	}
+
+	var initalizer Expr
+	// If there's an assignment, then evaluate the expression for use in the statement
+	if p.match(EQUAL) {
+		if initalizer, err = p.expression(); err != nil {
+			return nil, err
+		}
+	}
+
+	// Ensure there is an ending semicolon
+	if _, err := p.consume(SEMICOLON, "Expect ; after variable declaration"); err != nil {
+		return nil, err
+	}
+
+	// Return as a Var Statement so the interpreter knows to
+	// track the variable with the value
+	return VarStmt{name: token, initializer: initalizer}, nil
+}
+
+func (p *Parser) statement() (Stmt, error) {
+	// If there's a print statement, handle it
+	if p.match(PRINT) {
+		return p.printStatement()
+	}
+	// If theres a {, build a BlockStmt with all the statements before }
+	if p.match(LEFT_BRACE) {
+		// Build the statement list by calling block()
+		stmts, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+		// Build the BlockStmt statment and return
+		return BlockStmt{statements: stmts}, nil
+	}
+
+	// Otherwise, handle the generic expression case
+	return p.expressionStatement()
+}
+
+func (p *Parser) block() ([]Stmt, error) {
+	var statements []Stmt
+
+	// Create a list of statements between { and }
+	for !(p.peek().TType == RIGHT_BRACE) && !p.isAtEnd() {
+		stmt, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, stmt)
+	}
+
+	// Consume the right brace to finish the scope
+	if _, err := p.consume(RIGHT_BRACE, "Expeted } to close block"); err != nil {
+		return nil, err
+	}
+
+	// Return the list of statments
+	// Note this does NOT return a singluar statement (wrapped in a BlockStmt)
+	// This is becuase its a convient pice of code to also use for getting all statements
+	// within a lox function. If this returned a BlockStmt{}, then we could not reuse this code
+	return statements, nil
+}
+
+func (p *Parser) printStatement() (Stmt, error) {
+	// Expand the following espression to print out
+	value, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there is an ending semicolon
+	_, err = p.consume(SEMICOLON, "Expect ; after value")
+	if err != nil {
+		return nil, err
+	}
+
+	// Return as a print statement so the interpreter knows to print
+	return PrintStmt{expression: value}, nil
+}
+
+func (p *Parser) expressionStatement() (Stmt, error) {
+	// Expand the expression
+	value, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there is an ending semicolon
+	_, err = p.consume(SEMICOLON, "Expect ; after value")
+	if err != nil {
+		return nil, err
+	}
+
+	// Return as a generic Expression
+	return ExprStmt{expression: value}, nil
 }
 
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	// As of now, a passthrough in the recursive expansion
+	return p.assignment()
+}
+
+func (p *Parser) assignment() (Expr, error) {
+
+	// Goes down the recursive tree to get the expression
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	// If there's an assignment happening, handle it
+	if p.match(EQUAL) {
+		if equals, ok := p.previous(); ok {
+			// Evaluate the value to assign to the variable
+			value, err := p.assignment()
+			if err != nil {
+				return nil, err
+			}
+
+			// Ensure the left side is a variable that can be assigned
+			if v, ok := expr.(Variable); ok {
+				// Build the variable assignment expression
+				return Assign{Var: v, Name: equals, Value: value}, nil
+			}
+
+			return nil, fmt.Errorf("error at line %d: invalid assiment target", equals.Line)
+		}
+	}
+
+	// Returns the expression by itself if there's no assignment happening
+	return expr, nil
 }
 
 func (p *Parser) equality() (Expr, error) {
+	// Build the first expression
 	expr, err := p.comparison()
 	if err != nil {
 		return nil, err
 	}
 
+	// If there's a comparison happening (== or !=) handle it
 	for p.match(EQUAL_EQUAL, BANG_EQUAL) {
 		if operator, ok := p.previous(); ok {
+			// Build the right side expression of the comparison
 			right, err := p.comparison()
 			if err != nil {
 				return nil, err
 			}
-			expr = Binary{Left: expr, Operator: operator, Right: right}
+			return Binary{Left: expr, Operator: operator, Right: right}, nil
 		}
-
 	}
 
+	// Return the expression by itself if there's no comparison
 	return expr, nil
 }
 
 func (p *Parser) comparison() (Expr, error) {
 
+	//
 	expr, err := p.term()
 	if err != nil {
 		return nil, err
@@ -152,6 +302,11 @@ func (p *Parser) primary() (Expr, error) {
 			return Literal{token.Literal}, nil
 		}
 	}
+	if p.match(IDENTIFIER) {
+		if token, ok := p.previous(); ok {
+			return Variable{token}, nil
+		}
+	}
 	if p.match(LEFT_PAREN) {
 		expr, err := p.expression()
 		if err != nil {
@@ -164,7 +319,7 @@ func (p *Parser) primary() (Expr, error) {
 		return Grouping{expr}, nil
 	}
 
-	return nil, fmt.Errorf("error at line %d: unknown token '%v'", p.peek().Line, p.peek().Lexeme)
+	return nil, fmt.Errorf("error at line %d: unexpected token '%v'", p.peek().Line, p.peek().Lexeme)
 }
 
 func (p *Parser) match(tokenType ...TokenType) bool {
@@ -182,7 +337,7 @@ func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 	token := p.peek()
 
 	if token.TType != tokenType {
-		return Token{}, fmt.Errorf("error at line %d: expected '%v'", token.Line, token.String())
+		return Token{}, fmt.Errorf(message)
 	}
 
 	p.advance()

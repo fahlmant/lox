@@ -50,18 +50,16 @@ func run(source string) {
 	}*/
 
 	p := Parser{tokens: s.tokens}
-	p.parse()
+	stms, err := p.parse()
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	if !p.hadError {
 		var i Interpreter
-		for _, e := range p.expressions {
-			result, err := i.Interpret(e)
-			if err != nil {
-				fmt.Printf("%v\n", err)
-				return
-			}
-			fmt.Printf("%+v\n", result)
+		err = i.Interpret(stms)
+		if err != nil {
+			fmt.Println(err)
 		}
-
 	}
 }
