@@ -65,6 +65,12 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 }
 
 func (p *Parser) statement() (Stmt, error) {
+
+	// If there's an if statement, handle it
+	if p.match(IF) {
+		return p.ifStatement()
+	}
+
 	// If there's a print statement, handle it
 	if p.match(PRINT) {
 		return p.printStatement()
@@ -106,6 +112,43 @@ func (p *Parser) block() ([]Stmt, error) {
 	// This is becuase its a convient pice of code to also use for getting all statements
 	// within a lox function. If this returned a BlockStmt{}, then we could not reuse this code
 	return statements, nil
+}
+
+func (p *Parser) ifStatement() (Stmt, error) {
+
+	// Ensure there is a left paren after an "if"
+	if _, err := p.consume(LEFT_PAREN, "Expect ( after an if"); err != nil {
+		return nil, err
+	}
+
+	// Get the condition expression of the if
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there is a right paren after the condition
+	if _, err := p.consume(RIGHT_PAREN, "Expect ) after an if condition"); err != nil {
+		return nil, err
+	}
+
+	// Get the statement to do with the conditional
+	thenStmt, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// If there's an "else", also get that statement
+	var elseStmt Stmt
+	if p.match(ELSE) {
+		elseStmt, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Return an IfStatement with the condition, the expression and the else if there is one
+	return IfStmt{condition: condition, branch: thenStmt, elseStmt: elseStmt}, nil
 }
 
 func (p *Parser) printStatement() (Stmt, error) {

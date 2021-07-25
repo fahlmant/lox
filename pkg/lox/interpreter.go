@@ -194,6 +194,33 @@ func (i *Interpreter) visitExprStmt(e ExprStmt) error {
 	return e.expression.Accept(i)
 }
 
+// Visitor pattern of if statements.
+// Evaluates the condition, and if its true, evaluates the branch
+// IF not true, checks the else, and if it exists, evaluates the else
+func (i *Interpreter) visitIfStmt(ifStmt IfStmt) error {
+
+	expr, err := i.evaluate(ifStmt.condition)
+	if err != nil {
+		return err
+	}
+
+	if isTruthy(expr) {
+		err = ifStmt.branch.Accept(i)
+		if err != nil {
+			return err
+		}
+	} else {
+		if ifStmt.elseStmt != nil {
+			err = ifStmt.elseStmt.Accept(i)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // Visitor pattern for print statements. Evaluates and then prints the result
 func (i *Interpreter) visitPrintStmt(p PrintStmt) error {
 

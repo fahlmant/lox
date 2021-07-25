@@ -7,8 +7,9 @@ type Stmt interface {
 
 type StmtVisitor interface {
 	visitBlockStmt(BlockStmt) error
-	visitPrintStmt(PrintStmt) error
 	visitExprStmt(ExprStmt) error
+	visitIfStmt(IfStmt) error
+	visitPrintStmt(PrintStmt) error
 	visitVarStmt(VarStmt) error
 }
 
@@ -20,20 +21,30 @@ func (b BlockStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitBlockStmt(b)
 }
 
-type PrintStmt struct {
-	expression Expr
-}
-
-func (p PrintStmt) Accept(visitor StmtVisitor) error {
-	return visitor.visitPrintStmt(p)
-}
-
 type ExprStmt struct {
 	expression Expr
 }
 
 func (e ExprStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitExprStmt(e)
+}
+
+type IfStmt struct {
+	condition Expr
+	branch    Stmt
+	elseStmt  Stmt
+}
+
+func (i IfStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitIfStmt(i)
+}
+
+type PrintStmt struct {
+	expression Expr
+}
+
+func (p PrintStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitPrintStmt(p)
 }
 
 type VarStmt struct {
