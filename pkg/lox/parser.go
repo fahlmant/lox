@@ -66,6 +66,11 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 func (p *Parser) statement() (Stmt, error) {
 
+	// If there's a for statement, handle it
+	if p.match(FOR) {
+		return p.forStatement()
+	}
+
 	// If there's an if statement, handle it
 	if p.match(IF) {
 		return p.ifStatement()
@@ -74,6 +79,10 @@ func (p *Parser) statement() (Stmt, error) {
 	// If there's a print statement, handle it
 	if p.match(PRINT) {
 		return p.printStatement()
+	}
+	// If there's a while statement, handle it
+	if p.match(WHILE) {
+		return p.whileStatement()
 	}
 	// If theres a {, build a BlockStmt with all the statements before }
 	if p.match(LEFT_BRACE) {
@@ -112,6 +121,91 @@ func (p *Parser) block() ([]Stmt, error) {
 	// This is becuase its a convient pice of code to also use for getting all statements
 	// within a lox function. If this returned a BlockStmt{}, then we could not reuse this code
 	return statements, nil
+}
+
+func (p *Parser) forStatement() (Stmt, error) {
+
+	var err error
+	// Ensure there is a left parent after a "for"
+	if _, err = p.consume(LEFT_PAREN, "Expect ( after a for"); err != nil {
+		return nil, err
+	}
+
+	// Example
+	// for (var i = 0; i < 5; i = i + 1)
+
+	// Get the initalizer, i.e. the "var i = 0" part of th example
+	// this can be a var declaration, an expression, or just empty
+	var initializer Stmt
+	if p.match(SEMICOLON) {
+		initializer = nil
+	} else if p.match(VAR) {
+		initializer, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		initializer, err = p.expressionStatement()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Get the conndition, i.e. "i < 5" from the example
+	var condition Expr
+	if p.peek().TType != SEMICOLON {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Consume the semicolon after the condition
+	if _, err := p.consume(SEMICOLON, "Expect ; after loop condition"); err != nil {
+		return nil, err
+	}
+
+	// Get the increment, i.e "i = i + 1" from the example
+	var increment Expr
+	if p.peek().TType != RIGHT_PAREN {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Consume the right paren after the condition
+	if _, err := p.consume(RIGHT_PAREN, "Expect ) after for clauses"); err != nil {
+		return nil, err
+	}
+
+	var body Stmt
+	body, err = p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new block with the body statement and the increment if there is one
+	if increment != nil {
+		body = BlockStmt{[]Stmt{body, ExprStmt{expression: increment}}}
+	}
+
+	// If there's no condition, default to true
+	if condition == nil {
+		condition = Literal{true}
+	}
+
+	// Create a while statement with the condition and the body
+	// This is part of desugaring the for loop into a while loop
+	body = WhileStmt{condition: condition, body: body}
+
+	// If there's an initializer, build a block where that statement is executed before the
+	// while loop
+	if initializer != nil {
+		body = BlockStmt{[]Stmt{initializer, body}}
+	}
+
+	return body, nil
 }
 
 func (p *Parser) ifStatement() (Stmt, error) {
@@ -185,6 +279,36 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 	return ExprStmt{expression: value}, nil
 }
 
+func (p *Parser) whileStatement() (Stmt, error) {
+
+	// Ensure there is a left paren after a "while"
+	_, err := p.consume(LEFT_PAREN, "Expect ( after while")
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the condition expression of the "while"
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	// Ensure there is a left paren after the "while" condition
+	if _, err := p.consume(RIGHT_PAREN, "Expect ) after a while"); err != nil {
+		return nil, err
+	}
+
+	// Get the statement to do with the conditional
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// Return a While statement with the condition and stmt body
+	return WhileStmt{condition: condition, body: body}, nil
+
+}
+
 func (p *Parser) expression() (Expr, error) {
 	// As of now, a passthrough in the recursive expansion
 	return p.assignment()
@@ -193,7 +317,7 @@ func (p *Parser) expression() (Expr, error) {
 func (p *Parser) assignment() (Expr, error) {
 
 	// Goes down the recursive tree to get the expression
-	expr, err := p.equality()
+	expr, err := p.or()
 	if err != nil {
 		return nil, err
 	}
@@ -218,6 +342,58 @@ func (p *Parser) assignment() (Expr, error) {
 	}
 
 	// Returns the expression by itself if there's no assignment happening
+	return expr, nil
+}
+
+func (p *Parser) or() (Expr, error) {
+
+	// Get the left expression
+	expr, err := p.and()
+	if err != nil {
+		return nil, err
+	}
+
+	//If there is an "or", handle it
+	for p.match(OR) {
+		// Tryo t get the operator and the right size
+		if operator, ok := p.previous(); ok {
+			right, err := p.and()
+			if err != nil {
+				return nil, err
+			}
+
+			// Return a Logical "left or right"
+			return Logical{Left: expr, Operator: operator, Right: right}, nil
+		}
+
+	}
+
+	// Return the signular expression if there's no "or"
+	return expr, nil
+}
+
+func (p *Parser) and() (Expr, error) {
+
+	// Get the left expression
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	// If there's an "and" handle it
+	for p.match(AND) {
+		// Try to get the operator and the right side
+		if operator, ok := p.previous(); ok {
+			right, err := p.equality()
+			if err != nil {
+				return nil, err
+			}
+			// Return a Logical "left and right"
+			return Logical{Left: expr, Operator: operator, Right: right}, nil
+		}
+	}
+
+	// Return the singular expression if there's no "and"
 	return expr, nil
 }
 

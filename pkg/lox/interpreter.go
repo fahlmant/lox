@@ -259,12 +259,68 @@ func (i *Interpreter) visitVarStmt(v VarStmt) error {
 	return nil
 }
 
+func (i *Interpreter) visitWhileStmt(w WhileStmt) error {
+
+	for {
+		isTrue, err := i.evaluate(w.condition)
+		if err != nil {
+			return err
+		}
+
+		if !isTruthy(isTrue) {
+			return nil
+		}
+
+		if err := w.body.Accept(i); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
 func (i *Interpreter) visitGrouping(g Grouping) error {
 
 	// Send the expression back into the visitor
 	_, err := i.evaluate(g.Expression)
 
 	return err
+}
+
+func (i *Interpreter) visitLogical(l Logical) error {
+	left, err := i.evaluate(l.Left)
+	if err != nil {
+		return err
+	}
+
+	if l.Operator.TType == OR {
+		// If the laft is false, return the right's truth value
+		if !isTruthy(left) {
+			right, err := i.evaluate(l.Right)
+			if err != nil {
+				return err
+			}
+			i.literal = Literal{Value: isTruthy(right)}
+		} else {
+			// If the left is true, then the "or" is true
+			i.literal = Literal{Value: true}
+		}
+	} else if l.Operator.TType == AND {
+		// This could probably be moved to just an ekse
+		// since "or" and "and" are the only two logicals
+		if isTruthy(left) {
+			// If the left is true, return the truthiness of the right
+			right, err := i.evaluate(l.Right)
+			if err != nil {
+				return err
+			}
+			i.literal = Literal{Value: isTruthy(right)}
+		} else {
+			// If left is false, no need to check right
+			i.literal = Literal{Value: false}
+		}
+	}
+
+	return nil
 }
 
 func (i *Interpreter) visitUnary(u Unary) error {

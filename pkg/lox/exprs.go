@@ -14,6 +14,7 @@ type ExprVisitor interface {
 	visitBinary(Binary) error
 	visitGrouping(Grouping) error
 	visitLiteral(Literal) error
+	visitLogical(Logical) error
 	visitUnary(Unary) error
 	visitVariable(Variable) error
 }
@@ -63,6 +64,17 @@ type Literal struct {
 // Boilerplate visitor pattern for Literal
 func (l Literal) Accept(visitor ExprVisitor) error {
 	return visitor.visitLiteral(l)
+}
+
+// Represents a logical "and" or "or"
+type Logical struct {
+	Left     Expr
+	Operator Token
+	Right    Expr
+}
+
+func (l Logical) Accept(visitor ExprVisitor) error {
+	return visitor.visitLogical(l)
 }
 
 // Represetns unary operations
