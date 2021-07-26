@@ -230,8 +230,7 @@ func (i *Interpreter) visitPrintStmt(p PrintStmt) error {
 		return err
 	}
 	// Print the result
-	fmt.Println(expr)
-
+	fmt.Println(expr.Value)
 	return nil
 }
 
