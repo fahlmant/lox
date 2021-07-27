@@ -17,7 +17,7 @@ func (s *Scanner) scanTokens() {
 	}
 
 	// Add EOF to the end of token list
-	s.tokens = append(s.tokens, Token{TType: EOF, Lexeme: "", Literal: "", Line: s.line})
+	s.tokens = append(s.tokens, Token{tType: EOF, lexeme: "", literal: "", line: s.line})
 }
 
 // Check if all runes have been checked
@@ -113,7 +113,7 @@ func (s *Scanner) addToken(tokenType TokenType, literal string) {
 	// Get the textual representation of the token
 	text := s.source[s.start:s.current]
 	// Create token with tokentype, string, string literal provided and line number
-	s.tokens = append(s.tokens, Token{TType: tokenType, Lexeme: string(text), Literal: literal, Line: s.line})
+	s.tokens = append(s.tokens, Token{tType: tokenType, lexeme: string(text), literal: literal, line: s.line})
 }
 
 // Consume the next rune

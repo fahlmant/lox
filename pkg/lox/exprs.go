@@ -22,9 +22,9 @@ type ExprVisitor interface {
 // Represents an assignment expression
 // example: var a = 1
 type Assign struct {
-	Var   Variable
-	Name  Token
-	Value Expr
+	variable Variable
+	name     Token
+	value    Expr
 }
 
 // Boilerplate visitor pattern for Assign
@@ -36,9 +36,9 @@ func (a Assign) Accept(visitor ExprVisitor) error {
 // example 1 + 2
 // example (a+2) / (b-2) {Nested binary expressions}
 type Binary struct {
-	Left     Expr
-	Operator Token
-	Right    Expr
+	left     Expr
+	operator Token
+	right    Expr
 }
 
 // Boilerplate visitor pattern for Binary
@@ -48,7 +48,7 @@ func (b Binary) Accept(visitor ExprVisitor) error {
 
 // Represents a grouping of expressions
 type Grouping struct {
-	Expression Expr
+	expression Expr
 }
 
 // Boilerplate visitor pattern for Grouping
@@ -58,7 +58,7 @@ func (g Grouping) Accept(visitor ExprVisitor) error {
 
 // Represents a singular value, such as a number or a string
 type Literal struct {
-	Value interface{}
+	value interface{}
 }
 
 // Boilerplate visitor pattern for Literal
@@ -68,9 +68,9 @@ func (l Literal) Accept(visitor ExprVisitor) error {
 
 // Represents a logical "and" or "or"
 type Logical struct {
-	Left     Expr
-	Operator Token
-	Right    Expr
+	left     Expr
+	operator Token
+	right    Expr
 }
 
 func (l Logical) Accept(visitor ExprVisitor) error {
@@ -80,8 +80,8 @@ func (l Logical) Accept(visitor ExprVisitor) error {
 // Represetns unary operations
 // example: -1 or !true
 type Unary struct {
-	Operator Token
-	Right    Expr
+	operator Token
+	right    Expr
 }
 
 // Boilerplate visitor pattern for Unary
@@ -92,7 +92,7 @@ func (u Unary) Accept(visitor ExprVisitor) error {
 // Represents a variable name for access
 // Example: print foo
 type Variable struct {
-	Token
+	token Token
 }
 
 // Boilerplate visitor pattern for Variable

@@ -103,7 +103,7 @@ func (p *Parser) block() ([]Stmt, error) {
 	var statements []Stmt
 
 	// Create a list of statements between { and }
-	for !(p.peek().TType == RIGHT_BRACE) && !p.isAtEnd() {
+	for !(p.peek().tType == RIGHT_BRACE) && !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
 			return nil, err
@@ -153,7 +153,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 
 	// Get the conndition, i.e. "i < 5" from the example
 	var condition Expr
-	if p.peek().TType != SEMICOLON {
+	if p.peek().tType != SEMICOLON {
 		condition, err = p.expression()
 		if err != nil {
 			return nil, err
@@ -167,7 +167,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 
 	// Get the increment, i.e "i = i + 1" from the example
 	var increment Expr
-	if p.peek().TType != RIGHT_PAREN {
+	if p.peek().tType != RIGHT_PAREN {
 		increment, err = p.expression()
 		if err != nil {
 			return nil, err
@@ -334,10 +334,10 @@ func (p *Parser) assignment() (Expr, error) {
 			// Ensure the left side is a variable that can be assigned
 			if v, ok := expr.(Variable); ok {
 				// Build the variable assignment expression
-				return Assign{Var: v, Name: equals, Value: value}, nil
+				return Assign{variable: v, name: equals, value: value}, nil
 			}
 
-			return nil, fmt.Errorf("error at line %d: invalid assiment target", equals.Line)
+			return nil, fmt.Errorf("error at line %d: invalid assiment target", equals.line)
 		}
 	}
 
@@ -363,7 +363,7 @@ func (p *Parser) or() (Expr, error) {
 			}
 
 			// Return a Logical "left or right"
-			return Logical{Left: expr, Operator: operator, Right: right}, nil
+			return Logical{left: expr, operator: operator, right: right}, nil
 		}
 
 	}
@@ -389,7 +389,7 @@ func (p *Parser) and() (Expr, error) {
 				return nil, err
 			}
 			// Return a Logical "left and right"
-			return Logical{Left: expr, Operator: operator, Right: right}, nil
+			return Logical{left: expr, operator: operator, right: right}, nil
 		}
 	}
 
@@ -412,7 +412,7 @@ func (p *Parser) equality() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			return Binary{Left: expr, Operator: operator, Right: right}, nil
+			return Binary{left: expr, operator: operator, right: right}, nil
 		}
 	}
 
@@ -434,7 +434,7 @@ func (p *Parser) comparison() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			expr = Binary{Left: expr, Operator: operator, Right: right}
+			expr = Binary{left: expr, operator: operator, right: right}
 		}
 	}
 
@@ -454,7 +454,7 @@ func (p *Parser) term() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			expr = Binary{Left: expr, Operator: operator, Right: right}
+			expr = Binary{left: expr, operator: operator, right: right}
 
 		}
 	}
@@ -474,7 +474,7 @@ func (p *Parser) factor() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			expr = Binary{Left: expr, Operator: operator, Right: right}
+			expr = Binary{left: expr, operator: operator, right: right}
 		}
 	}
 
@@ -489,7 +489,7 @@ func (p *Parser) unary() (Expr, error) {
 			if err != nil {
 				return nil, err
 			}
-			return Unary{Operator: operator, Right: right}, nil
+			return Unary{operator: operator, right: right}, nil
 		}
 	}
 
@@ -499,17 +499,17 @@ func (p *Parser) unary() (Expr, error) {
 func (p *Parser) primary() (Expr, error) {
 
 	if p.match(FALSE) {
-		return Literal{Value: false}, nil
+		return Literal{value: false}, nil
 	}
 	if p.match(TRUE) {
-		return Literal{Value: true}, nil
+		return Literal{value: true}, nil
 	}
 	if p.match(NIL) {
-		return Literal{Value: nil}, nil
+		return Literal{value: nil}, nil
 	}
 	if p.match(NUMBER) {
 		if token, ok := p.previous(); ok {
-			value, err := strconv.ParseFloat(token.Literal, 64)
+			value, err := strconv.ParseFloat(token.literal, 64)
 			if err != nil {
 				return nil, err
 			}
@@ -518,7 +518,7 @@ func (p *Parser) primary() (Expr, error) {
 	}
 	if p.match(STRING) {
 		if token, ok := p.previous(); ok {
-			return Literal{token.Literal}, nil
+			return Literal{token.literal}, nil
 		}
 	}
 	if p.match(IDENTIFIER) {
@@ -538,7 +538,7 @@ func (p *Parser) primary() (Expr, error) {
 		return Grouping{expr}, nil
 	}
 
-	return nil, fmt.Errorf("error at line %d: unexpected token '%v'", p.peek().Line, p.peek().Lexeme)
+	return nil, fmt.Errorf("error at line %d: unexpected token '%v'", p.peek().line, p.peek().lexeme)
 }
 
 func (p *Parser) match(tokenType ...TokenType) bool {
@@ -555,7 +555,7 @@ func (p *Parser) match(tokenType ...TokenType) bool {
 func (p *Parser) consume(tokenType TokenType, message string) (Token, error) {
 	token := p.peek()
 
-	if token.TType != tokenType {
+	if token.tType != tokenType {
 		return Token{}, fmt.Errorf(message)
 	}
 
@@ -577,7 +577,7 @@ func (p *Parser) check(t TokenType) bool {
 		return false
 	}
 
-	return p.peek().TType == t
+	return p.peek().tType == t
 }
 
 func (p *Parser) peek() Token {
@@ -596,5 +596,5 @@ func (p *Parser) advance() (Token, bool) {
 
 func (p *Parser) isAtEnd() bool {
 
-	return p.peek().TType == EOF
+	return p.peek().tType == EOF
 }

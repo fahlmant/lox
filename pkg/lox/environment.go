@@ -17,9 +17,9 @@ func NewEnvironment(enclosing *Environment) *Environment {
 // Does NOT allow for first time variable declaration. See Define()
 func (e *Environment) Assign(v Variable, expr Expr) error {
 	// Checks if the var name exists in the values map
-	if _, ok := e.values[v.Lexeme]; ok {
+	if _, ok := e.values[v.token.lexeme]; ok {
 		// If the var name exists, update the value
-		e.values[v.Lexeme] = expr
+		e.values[v.token.lexeme] = expr
 		return nil
 	}
 
@@ -29,7 +29,7 @@ func (e *Environment) Assign(v Variable, expr Expr) error {
 	}
 
 	// If the var is not in the map, return an error
-	return fmt.Errorf("error at line %d: undefined variable %v", v.Line, v.Lexeme)
+	return fmt.Errorf("error at line %d: undefined variable %v", v.token.line, v.token.lexeme)
 
 }
 
@@ -37,7 +37,7 @@ func (e *Environment) Assign(v Variable, expr Expr) error {
 func (e *Environment) Get(v Variable) (interface{}, error) {
 
 	// Check to ensure the var exists in the map
-	if value, ok := e.values[v.Lexeme]; ok {
+	if value, ok := e.values[v.token.lexeme]; ok {
 		// If the var exists, return the value
 		return value, nil
 	}
@@ -48,14 +48,14 @@ func (e *Environment) Get(v Variable) (interface{}, error) {
 	}
 
 	// If the var is not in the map, return an error
-	return nil, fmt.Errorf("error at line %d: undefined variable %v", v.Line, v.Lexeme)
+	return nil, fmt.Errorf("error at line %d: undefined variable %v", v.token.line, v.token.lexeme)
 }
 
 // Defines a new variable in the map
 func (e *Environment) Define(v Variable, expr Expr) error {
 
 	// Creates an entry in the map for a new variable and its definition
-	e.values[v.Lexeme] = expr
+	e.values[v.token.lexeme] = expr
 
 	return nil
 }

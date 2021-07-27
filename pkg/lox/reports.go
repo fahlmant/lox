@@ -18,10 +18,10 @@ func report(line int, where, message string) {
 }
 
 func errorToken(t Token, message string) {
-	if t.TType == EOF {
-		report(t.Line, " at end", message)
+	if t.tType == EOF {
+		report(t.line, " at end", message)
 	} else {
-		report(t.Line, "at '"+t.Lexeme+"'", message)
+		report(t.line, "at '"+t.lexeme+"'", message)
 	}
 }
 
@@ -29,26 +29,26 @@ func errorToken(t Token, message string) {
 type AstPrinter struct{}
 
 func (a AstPrinter) VisitBinary(b Binary) error {
-	fmt.Printf("(%s %v %v)", b.Operator.Lexeme, b.Left, b.Right)
+	fmt.Printf("(%s %v %v)", b.operator.lexeme, b.left, b.right)
 
 	return nil
 }
 
 func (a AstPrinter) VisitGrouping(g Grouping) error {
-	fmt.Printf("(group %v)", g.Expression)
+	fmt.Printf("(group %v)", g.expression)
 
 	return nil
 }
 
 func (a AstPrinter) VisitLiteral(l Literal) error {
-	str := fmt.Sprintf("%v", l.Value)
+	str := fmt.Sprintf("%v", l.value)
 	fmt.Printf("(%v\n)", str)
 
 	return nil
 }
 
 func (a AstPrinter) VisitUnary(u Unary) error {
-	fmt.Printf("(%s %v)", u.Operator.Lexeme, u.Right)
+	fmt.Printf("(%s %v)", u.operator.lexeme, u.right)
 
 	return nil
 }
