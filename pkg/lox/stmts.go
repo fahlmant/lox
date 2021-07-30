@@ -8,8 +8,10 @@ type Stmt interface {
 type StmtVisitor interface {
 	visitBlockStmt(BlockStmt) error
 	visitExprStmt(ExprStmt) error
+	visitFuncStmt(FuncStmt) error
 	visitIfStmt(IfStmt) error
 	visitPrintStmt(PrintStmt) error
+	visitReturnStmt(ReturnStmt) error
 	visitVarStmt(VarStmt) error
 	visitWhileStmt(WhileStmt) error
 }
@@ -30,6 +32,17 @@ func (e ExprStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitExprStmt(e)
 }
 
+type FuncStmt struct {
+	name    Token
+	params  []Token
+	body    []Stmt
+	closure *Environment
+}
+
+func (f FuncStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitFuncStmt(f)
+}
+
 type IfStmt struct {
 	condition Expr
 	branch    Stmt
@@ -46,6 +59,15 @@ type PrintStmt struct {
 
 func (p PrintStmt) Accept(visitor StmtVisitor) error {
 	return visitor.visitPrintStmt(p)
+}
+
+type ReturnStmt struct {
+	keyword Token
+	value   Expr
+}
+
+func (r ReturnStmt) Accept(visitor StmtVisitor) error {
+	return visitor.visitReturnStmt(r)
 }
 
 type VarStmt struct {

@@ -30,12 +30,64 @@ func (p *Parser) parse() ([]Stmt, error) {
 }
 
 func (p *Parser) declaration() (Stmt, error) {
+
+	// If there's a function declaration, handle it
+	if p.match(FUN) {
+		return p.function("function")
+	}
 	// If there's a variable declaration, handle it
 	if p.match(VAR) {
 		return p.varDeclaration()
 	}
 	// Otherwise, handle the section as a statement
 	return p.statement()
+}
+
+func (p *Parser) function(kind string) (Stmt, error) {
+
+	// Get the functions name
+	name, err := p.consume(IDENTIFIER, "Expect "+kind+" name")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LEFT_PAREN, "Expect ( after "+kind+" name")
+	if err != nil {
+		return nil, err
+	}
+
+	var args []Token
+	if p.peek().tType != RIGHT_PAREN {
+		for {
+			token, err := p.consume(IDENTIFIER, "Expected parameter name")
+			if err != nil {
+				return nil, err
+			}
+
+			args = append(args, token)
+
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+
+	_, err = p.consume(RIGHT_PAREN, "Expect ) after arguments")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = p.consume(LEFT_BRACE, "Expect { before "+kind+" body")
+	if err != nil {
+		return nil, err
+	}
+
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+
+	return FuncStmt{name: name, params: args, body: body}, nil
 }
 
 func (p *Parser) varDeclaration() (Stmt, error) {
@@ -80,6 +132,12 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(PRINT) {
 		return p.printStatement()
 	}
+
+	// If there's a return statement, handle it
+	if p.match(RETURN) {
+		return p.returnStatement()
+	}
+
 	// If there's a while statement, handle it
 	if p.match(WHILE) {
 		return p.whileStatement()
@@ -246,7 +304,7 @@ func (p *Parser) ifStatement() (Stmt, error) {
 }
 
 func (p *Parser) printStatement() (Stmt, error) {
-	// Expand the following espression to print out
+	// Expand the following espression to Pr out
 	value, err := p.expression()
 	if err != nil {
 		return nil, err
@@ -260,6 +318,29 @@ func (p *Parser) printStatement() (Stmt, error) {
 
 	// Return as a print statement so the interpreter knows to print
 	return PrintStmt{expression: value}, nil
+}
+
+func (p *Parser) returnStatement() (Stmt, error) {
+
+	keyword, ok := p.previous()
+	if !ok {
+		return nil, fmt.Errorf("Unexpected error")
+	}
+	var value Expr
+	var err error
+	if !p.check(SEMICOLON) {
+		value, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	_, err = p.consume(SEMICOLON, "Expect ; after return value")
+	if err != nil {
+		return nil, err
+	}
+
+	return ReturnStmt{keyword: keyword, value: value}, nil
 }
 
 func (p *Parser) expressionStatement() (Stmt, error) {
@@ -493,7 +574,51 @@ func (p *Parser) unary() (Expr, error) {
 		}
 	}
 
-	return p.primary()
+	return p.call()
+}
+
+func (p *Parser) call() (Expr, error) {
+
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		if p.match(LEFT_PAREN) {
+			expr, err = p.finishCall(expr)
+		} else {
+			break
+		}
+	}
+
+	return expr, err
+}
+
+func (p *Parser) finishCall(callee Expr) (Expr, error) {
+
+	arguments := []Expr{}
+	if !p.check(RIGHT_PAREN) {
+		for {
+			arg, err := p.expression()
+			if err != nil {
+				return nil, err
+			}
+
+			arguments = append(arguments, arg)
+
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+
+	paren, err := p.consume(RIGHT_PAREN, "Expect ) after argument")
+	if err != nil {
+		return nil, err
+	}
+
+	return Call{callee: callee, paren: paren, arguments: arguments}, nil
 }
 
 func (p *Parser) primary() (Expr, error) {

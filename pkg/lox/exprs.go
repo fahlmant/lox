@@ -1,5 +1,10 @@
 package lox
 
+import (
+	"fmt"
+	"math"
+)
+
 // Expressions are combinations of values and operators
 // that create a new value
 type Expr interface {
@@ -12,6 +17,7 @@ type Expr interface {
 type ExprVisitor interface {
 	visitAssign(Assign) error
 	visitBinary(Binary) error
+	visitCall(Call) error
 	visitGrouping(Grouping) error
 	visitLiteral(Literal) error
 	visitLogical(Logical) error
@@ -46,6 +52,16 @@ func (b Binary) Accept(visitor ExprVisitor) error {
 	return visitor.visitBinary(b)
 }
 
+type Call struct {
+	callee    Expr
+	paren     Token
+	arguments []Expr
+}
+
+func (c Call) Accept(visitor ExprVisitor) error {
+	return visitor.visitCall(c)
+}
+
 // Represents a grouping of expressions
 type Grouping struct {
 	expression Expr
@@ -64,6 +80,32 @@ type Literal struct {
 // Boilerplate visitor pattern for Literal
 func (l Literal) Accept(visitor ExprVisitor) error {
 	return visitor.visitLiteral(l)
+}
+
+// Implement the String interface for literals
+func (l Literal) String() string {
+
+	if s, ok := l.value.(string); ok {
+		return s
+	}
+
+	if f, ok := l.value.(float64); ok {
+		if f == math.Trunc(f) {
+			return fmt.Sprintf("%d", int64(f))
+		}
+
+		return fmt.Sprintf("%f", f)
+	}
+
+	if b, ok := l.value.(bool); ok {
+		return fmt.Sprintf("%t", b)
+	}
+
+	if l.value == nil {
+		return "nil"
+	}
+
+	return fmt.Sprintf("%v", l.value)
 }
 
 // Represents a logical "and" or "or"

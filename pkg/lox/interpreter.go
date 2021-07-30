@@ -8,13 +8,29 @@ import (
 type Interpreter struct {
 	literal     Literal
 	environment *Environment
+	globals     *Environment
+}
+
+type ReturnValue struct {
+	Literal
+}
+
+func (r ReturnValue) Error() string {
+	return r.Literal.String()
 }
 
 // Main interpretation loop
 func (i *Interpreter) Interpret(stmts []Stmt) error {
 
+	// Initalize the global env
+	i.globals = NewEnvironment(nil)
+
 	// Create a new environment to initalize the empty map
-	i.environment = NewEnvironment(nil)
+	// Set global as the parent env
+	i.environment = NewEnvironment(i.globals)
+
+	// Create a clock variable at the global scope, with a new instance of a clockwq
+	i.globals.Define(Variable{token: Token{tType: VAR, lexeme: "clock", line: 0}}, Literal{Clock{}})
 
 	// Loop through all statements
 	for _, stmt := range stmts {
@@ -39,6 +55,40 @@ func (i *Interpreter) visitAssign(a Assign) error {
 
 	if l, ok := a.value.(Literal); ok {
 		i.literal = l
+	}
+
+	return nil
+}
+
+func (i *Interpreter) visitCall(c Call) error {
+
+	callee, err := i.evaluate(c.callee)
+	if err != nil {
+		return err
+	}
+
+	var arguments []Expr
+	for _, arg := range c.arguments {
+		value, err := i.evaluate(arg)
+		if err != nil {
+			return err
+		}
+
+		arguments = append(arguments, value)
+	}
+
+	if function, ok := callee.value.(LoxCallable); ok {
+
+		if function.arity() != len(arguments) {
+			return fmt.Errorf("expected %d arguments but %d were provided", function.arity(), len(arguments))
+		}
+
+		val, err := function.call(i, arguments)
+		if err != nil {
+			return err
+		}
+
+		i.literal = val
 	}
 
 	return nil
@@ -194,6 +244,16 @@ func (i *Interpreter) visitExprStmt(e ExprStmt) error {
 	return e.expression.Accept(i)
 }
 
+func (i *Interpreter) visitFuncStmt(f FuncStmt) error {
+
+	f.closure = i.environment
+
+	if err := i.environment.Define(Variable{f.name}, Literal{f}); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Visitor pattern of if statements.
 // Evaluates the condition, and if its true, evaluates the branch
 // IF not true, checks the else, and if it exists, evaluates the else
@@ -232,6 +292,14 @@ func (i *Interpreter) visitPrintStmt(p PrintStmt) error {
 	// Print the result
 	fmt.Println(expr.value)
 	return nil
+}
+
+func (i *Interpreter) visitReturnStmt(r ReturnStmt) error {
+	if err := r.value.Accept(i); err != nil {
+		return err
+	} else {
+		return ReturnValue{i.literal}
+	}
 }
 
 // Visitor pattern for Var statements
